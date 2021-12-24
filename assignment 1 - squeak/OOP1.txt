@@ -1,0 +1,202 @@
+Object subclass: #Monom
+	instanceVariableNames: 'exp coef'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'OOP1'!
+
+!Monom methodsFor: 'exp' stamp: '0 11/3/2021 15:13'!
+exp
+	^exp.! !
+
+!Monom methodsFor: 'exp' stamp: '0 11/3/2021 16:10'!
+exp: anInteger
+	(anInteger isInteger and: anInteger positive) ifTrue: [exp := anInteger.] ifFalse: [self error: 'invalid input'].! !
+
+
+!Monom methodsFor: 'coef' stamp: '0 11/3/2021 16:10'!
+coef
+	^coef.! !
+
+!Monom methodsFor: 'coef' stamp: '0 11/10/2021 19:26'!
+coef: anInteger
+	(anInteger isInteger) ifTrue: [coef := anInteger.] ifFalse: [self error: 'invalid input'].! !
+
+
+!Monom methodsFor: 'Derivative' stamp: '0 11/10/2021 18:51'!
+Derivative
+	| mon|
+	mon := self deepCopy.
+	mon exp: exp.
+	(exp = 0) ifFalse: [mon coef: exp*coef. mon exp: exp-1.] ifTrue: (mon coef: 0).
+	^mon.! !
+
+
+!Monom methodsFor: 'Integrate' stamp: '0 11/10/2021 20:00'!
+Integrate
+	| mon|
+	mon := self deepCopy.
+	mon exp: exp+1.
+	mon coef: (coef / (mon exp)).
+	((mon coef) isInteger) ifFalse: [self error: 'invalid input'].
+	(mon coef = 0) ifTrue: [mon exp: 0].
+	^mon.! !
+
+
+!Monom methodsFor: 'initialize-release' stamp: '0 11/10/2021 19:11'!
+initialize 
+	exp := 0.
+	coef := 0.! !
+
+
+Object subclass: #PolyStream
+	instanceVariableNames: 'block'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'OOP1'!
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:32'!
+add: aPolyStream
+	|bag|
+	bag:=aPolyStream block value.
+	(aPolyStream isKindOf: PolyStream) ifFalse: [self error: 'invalid input'] ifTrue: [bag do: [:dict| self block value add: dict]]."union O(1) dictionaries in bag therefore O(1) run time complexity"! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:53'!
+addCoef: coef withExp: exp
+	|prev factor multiply|
+	(coef isInteger) & (exp isInteger) & (exp positive) ifTrue: [ 
+		self block value do: [ 
+			:dict |multiply:=dict at: -2 . factor:=(dict at:-1)raisedTo:exp. (dict includesKey: exp) ifTrue: [ 
+				prev:= dict at: exp . dict at: exp put:(prev+ (coef/(factor*multiply)) )] ifFalse: [
+				dict at: exp put: (coef/(factor*multiply)) ] .^self ] ]
+			 ifFalse: [self error: 'invalid input'].
+			"O(1) run time since we add to the first dictionary in the bag an then exist"! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/7/2021 20:02'!
+block
+	^block! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:17'!
+eval: anInteger
+	|res|
+	res:=0.
+	self block value do: [:dict | res:=res+(self evalHelper: anInteger withDict: dict)].
+	 ^res.	! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:16'!
+evalHelper: anInteger withDict: dict
+	|res factor monom multiply|
+	res:=0.
+	factor:=dict at: -1.
+	multiply:= dict at: -2.
+	dict removeKey: -1.
+	dict removeKey: -2.
+	monom:=0.
+      (anInteger isInteger) ifFalse: [self error: 'invalid input'] ifTrue: [dict keysAndValuesDo: [ :exp :coef | monom:=(multiply*coef*((anInteger*factor) raisedTo: exp)). res:=res+monom]].
+	dict at: -1 put: factor.
+	dict at: -2 put: multiply.
+	 ^res.	! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:21'!
+filter: aSet
+	self block value do: [:dict | aSet do: [:v | dict removeKey: v]].  "O(1) dictionaries and O(1) setSize therefore the run time complexity is O(1)"! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:33'!
+multiplyBy: anInteger
+	|tmp|
+	(anInteger isInteger) ifFalse: [self error: 'invalid input'] ifTrue: [self block value do: [:dict | tmp:=dict at:-2 . dict at:-2 put: tmp*anInteger]]. "O(1) dictionaries therefore O(1) run time complexity"
+	! !
+
+!PolyStream methodsFor: 'methods' stamp: 'a 11/16/2021 20:33'!
+substitute: anInteger
+|tmp|
+	(anInteger isInteger) & (anInteger ~=0) ifFalse: [self error: 'invalid input'] ifTrue:[self block value do: [:dict | tmp:=dict at:-1 . dict at:-1 put: tmp*anInteger]]. "O(1) dictionaries therefore O(1) run time complexity"
+	
+	! !
+
+
+!PolyStream methodsFor: 'initialize-release' stamp: 'a 11/16/2021 20:30'!
+initialize
+	|dict bag|
+	bag:= Bag new.
+	dict:=Dictionary new.
+	dict at:-1 put:1.  "for substitute caching"
+	dict at:-2 put:1.  "for multiply caching"
+	dict at:0 put:0.
+	bag add:dict.
+	block := [bag].
+	! !
+
+
+Object subclass: #Polynom
+	instanceVariableNames: 'monoms'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'OOP1'!
+
+!Polynom methodsFor: 'asDictionary' stamp: '0 11/9/2021 15:19'!
+asDictionary
+	| dict|
+	
+	dict := Dictionary new.
+	monoms do: [:x | dict add: (x exp)->(x coef)].
+	^dict.! !
+
+
+!Polynom methodsFor: 'Integrate' stamp: '0 11/16/2021 20:27'!
+Integrate
+	|p|
+	p := Polynom new.
+	monoms do: [ :monom |  p addMonom: (monom Integrate).].
+	^p. ! !
+
+
+!Polynom methodsFor: 'Derivative' stamp: '0 11/16/2021 20:27'!
+Derivative
+	|p|
+	p := Polynom new.
+	monoms do: [ :monom | (monom exp = 0) ifFalse: [ p addMonom: (monom Derivative).]].
+	^p. ! !
+
+
+!Polynom methodsFor: 'eval' stamp: '0 11/13/2021 18:30'!
+eval: anInteger
+	| sum|
+	
+	sum := 0.
+	monoms do: [:x | sum := sum + ((x coef )* (anInteger raisedTo: (x exp)))].
+	^sum.
+	! !
+
+
+!Polynom methodsFor: 'add' stamp: '0 11/16/2021 20:30'!
+add: aPolynom
+	| pSum|
+	
+	(aPolynom isKindOf: Polynom) ifFalse: [self error: 'invalid input'].
+	pSum := aPolynom deepCopy.
+	monoms do: [ :monom | pSum addMonom: monom. ].
+	^pSum.! !
+
+
+!Polynom methodsFor: 'initialize-release' stamp: '0 11/9/2021 12:38'!
+initialize 
+	monoms := Set new.
+	^self! !
+
+
+!Polynom methodsFor: 'multiplyMonom' stamp: '0 11/16/2021 20:28'!
+multiplyMonom: aMonom
+	| pNom pExp pCoef|
+	(aMonom isKindOf: Monom)  ifFalse: [self error: 'invalid input'].
+	pNom := aMonom deepCopy.
+	monoms do: [:x | pExp := (pNom exp) + (x exp). pCoef := (pNom coef) * (x coef).  (pCoef = 0)   ifTrue: [monoms remove: x.] ifFalse: [x exp: pExp. x coef: pCoef.].].! !
+
+
+!Polynom methodsFor: 'addMonom' stamp: '0 11/16/2021 20:34'!
+addMonom: aMonom
+	| pNom pCoef isFound|
+	(aMonom isKindOf: Monom)  ifFalse: [self error: 'invalid input'].
+	pNom := aMonom deepCopy.
+	(aMonom coef = 0) ifFalse: [monoms do: [ :x | (pNom exp = x exp)
+		ifTrue: [pCoef := x coef + pNom coef. (pCoef = 0) ifFalse: [x coef: pCoef.] ifTrue: [monoms remove: x.]. isFound := True.]].
+	(isFound = True) ifFalse: [monoms add: pNom]].! !
