@@ -1,1 +1,1 @@
-# PolyStream is a class makes it possible for a polynomial to perform a mathematical operations in efficient way, it do every defined operation on a polynomial in O(1) time complexity except the evaluation operation. 
+## PolyStream is a class makes it possible for a polynomial to perform a mathematical operations in efficient way, it do every defined operation on a polynomial in O(1) time complexity except the evaluation operation. 
