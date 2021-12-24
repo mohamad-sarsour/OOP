@@ -1,1 +1,1 @@
-## FaceOOP will implement a social network similar to Facebook, but contains far fewer options,the system will allow people to join it, be friends with each other, share statuses, see details about each other, love certain statuses, etc.
+## FaceOOP implements a social network similar to Facebook, but contains far fewer options,the system will allow people to join it, be friends with each other, share statuses, see details about each other, love certain statuses, etc.
