@@ -1,0 +1,152 @@
+Object subclass: #MyObject
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'OOP3'!
+
+"-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- "!
+
+MyObject class
+	instanceVariableNames: 'behavesLike isInterface'!
+
+!MyObject class methodsFor: 'behavior' stamp: 'jb 12/23/2021 19:30'!
+ambiguities
+| res allmeth  |
+
+res := Set new.
+allmeth := Set new. 
+
+(self behavesLike) do: [:tmp | (tmp methodDictionary keys) do: [:method| 
+				((allmeth includes: method) )
+					ifTrue:[((res includes: method) not ) 
+							ifTrue: [  res add: method.]
+							].
+				].
+			allmeth addAll: (tmp methodDictionary keys).
+		].
+^(res asSortedCollection). 	! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'jb 12/23/2021 19:32'!
+behavesLike
+	|curr res tempSet|
+	res:=Set new.
+	(self=MyObject) ifTrue: [^res].
+	res addAll: (self instVarNamed: 'behavesLike').
+	(self isInterface = true) ifTrue: [res add: self].
+	curr:=self.
+	[curr~=MyObject and: [curr isInterface =false]] whileTrue: [curr:=curr superclass. res addAll: (curr instVarNamed: 'behavesLike')].
+	tempSet := Set new.
+	res do: [:intr | (self~=intr) ifTrue: [tempSet addAll: (intr behavesLike)]].
+	res addAll: tempSet.
+	^res.! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'jb 12/23/2021 17:56'!
+compile: aSourceCode
+|t9 parsed cr|
+	cr := (Character cr) asString.
+	t9 := aSourceCode asString.
+	parsed := (t9 splitBy: cr).
+	((self isInterface=true) and: (parsed size > 1)) ifTrue: [AssertionFailure signal: 'Interfaces are not allowed to have methods that define behavior!!'].
+	super compile: t9.
+! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'jb 12/23/2021 19:27'!
+compile: aSourceCode where: anOrderedCollection
+|parsed firstS secondS cr num s t1 args t2 t3 extrT t5 t6 t7 t8 t9 fin spce|
+	cr := (Character cr) asString.
+	t9 := aSourceCode asString.
+	t8 := anOrderedCollection asOrderedCollection.
+	parsed := (t9 splitBy: cr).
+	(self isInterface=true) ifTrue: [self compile: aSourceCode].
+	firstS := (parsed at: 1).
+	num := (firstS select: [:a | a = $: ]) size.
+	s := (t8 size).
+	(num = s) ifFalse: [((self isInterface=true) and: (parsed size > 1)) ifFalse: [AssertionFailure signal: 'Can not compile method, number of arguments is not equal to the number of constraints!!'.]].
+	t1 := ((firstS splitBy: ':') asOrderedCollection).
+	spce :=  Character space.
+	t1  removeFirst.
+	args := OrderedCollection new.
+	t5 := 'nil'.
+	t1 do: [:a | t2 := (a splitBy: ' '). t2:= t2 select: [:b | b size > 0]. ((t2 at: 1) = '') ifFalse: [args add: (t2 at: 1).] ifTrue: [args add: (t2 at: 2).]. ].
+	t6 := $' asString.
+	extrT := ''.
+	(1 to: num) do: [:i | t3 := '(', ((t8 at: i)asString), ' = ', t5,') ifFalse: [(',(args at: i)asString,  ' isKindOf: ', ((t8 at: i)asString) , ') ifFalse: [AssertionFailure signal: ',t6,'Type mismatch!! Argument ',(i asString ),' should be ',((t8 at: i)asString ),t6,'.].].'. extrT := extrT, t3, cr.].
+	
+	fin := (parsed at: 1), cr.
+	t7 := 2.
+	(parsed size > 1) ifTrue: [
+	secondS := ((parsed at: 2) splitBy: ' ').
+	secondS do: [:a| a:= (a select:[:b| (b ~= (Character space)) and: (b ~= (Character tab)).]).].
+	secondS := secondS select: [:a | a size > 0].
+	(((secondS at: 1) includesSubstring: '|') and: ( (secondS at: (secondS size)) includesSubstring: '|')) ifTrue: [t7 := 3. fin := fin, (parsed at: 2), cr.].].
+	fin := fin, extrT, cr.
+	(t7 to: (parsed size)) do: [:x| fin := fin, (parsed at: x).].
+	(self isInterface=true) ifTrue: [self compile: aSourceCode]
+	ifFalse: [super compile: fin].! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 15:26'!
+getBehavesLike
+	^(self instVarNamed: 'behavesLike').! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 19:08'!
+isImplemented
+
+	isInterface ifFalse: [AssertionFailure signal: (self name),' is not an interface!!' ].
+	MyObject allSubclasses do: [:cls | ((cls isInterface=false)  and:  [(cls behavesLike) includes: self]) ifTrue: [
+											(cls isImplemented_helper: self) ifTrue: [^true.].].].
+	^false.! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 19:09'!
+isImplemented_helper: interface
+
+	interface allSelectors do: [:selec | (((selec beginsWith: 'default')=false) & ((self canUnderstand: selec)=false)) ifTrue: [^false]].
+	interface behavesLike do: [:Inter | Inter selectors do: [:selec | ((selec beginsWith: 'default')=false) & ((self canUnderstand: selec)=false) ifTrue: [^false] ] ].
+	^true.
+	
+	! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 07:24'!
+isInterface
+	^isInterface.! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 16:41'!
+new
+	(self isInterface=true) ifTrue: [AssertionFailure signal: 'Interfaces can not be instantiated!!'].
+	^self basicNew.
+	 ! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 16:05'!
+subclass: aSubclassName
+instanceVariableNames: instVarNames
+classVariableNames: classVarNames
+poolDictionaries: poolDictionaries
+category: aCategoryName
+
+		|res|	
+	res:=(ClassBuilder new) superclass: self subclass: aSubclassName instanceVariableNames: instVarNames classVariableNames: classVarNames poolDictionaries: poolDictionaries category: aCategoryName. 
+	res instVarNamed: 'isInterface' put: false .
+	res instVarNamed: 'behavesLike' put: {}.
+	^res.! !
+
+!MyObject class methodsFor: 'behavior' stamp: 'a 12/23/2021 16:16'!
+subclass: aSubclassName
+isInterface: isInterface
+behavesLike: aCollection
+instanceVariableNames: instVarNames
+classVariableNames: classVarNames
+poolDictionaries: poolDictionaries
+category: aCategoryName
+
+	|res|
+	
+	(isInterface=true) ifTrue: [ (self name = 'MyObject')  ifFalse: [AssertionFailure signal: 'Interfaces must derive from MyObject!!'].
+					     			instVarNames asString size =0 ifFalse: [AssertionFailure signal: 'Interfaces can not have state!!']
+					   		   ].
+	isInterface=false  ifTrue: [(self isInterface=true) ifTrue: [ AssertionFailure signal:'Classes can not derive from an interface!!']].
+			
+	aCollection do: [:InterFace | (InterFace isInterface=true) ifFalse: [AssertionFailure signal: 'Can not behave like a non-interface!!' ]].
+	res := self subclass: aSubclassName instanceVariableNames: instVarNames classVariableNames: classVarNames poolDictionaries: poolDictionaries category: aCategoryName.
+	res instVarNamed: 'isInterface' put: isInterface.
+	res instVarNamed: 'behavesLike' put: (aCollection asSet).
+	^res.
+! !
